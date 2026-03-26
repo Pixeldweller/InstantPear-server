@@ -3,6 +3,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.1.20"
     kotlin("plugin.spring") version "2.1.20"
+    war
 }
 
 group = "com.pixeldweller"
@@ -22,6 +23,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
 }
 
 kotlin {
