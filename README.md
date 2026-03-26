@@ -21,12 +21,22 @@ The server starts on port **9274** by default (configurable in `application.prop
 
 WebSocket endpoint is available at `/ws` and `/`.
 
-## Build JAR
+## Build
+
+### Standalone JAR (embedded Tomcat)
 
 ```bash
 ./gradlew bootJar
 java -jar build/libs/InstantPear-server-1.0-SNAPSHOT.jar
 ```
+
+### WAR (for external Tomcat 10+)
+
+```bash
+./gradlew bootWar
+```
+
+Deploy `build/libs/InstantPear-server-1.0-SNAPSHOT.war` to your Tomcat `webapps/` directory.
 
 ## Deployment
 
