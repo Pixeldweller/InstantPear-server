@@ -18,6 +18,10 @@ class PearWebSocketHandler(private val objectMapper: ObjectMapper) : TextWebSock
     data class Lobby(val key: String, val members: MutableList<LobbyMember> = mutableListOf())
 
     private val lobbies = ConcurrentHashMap<String, Lobby>()
+
+    companion object {
+        private val SILENT_TYPES = setOf(PearMessage.MOUSE_MOVE, PearMessage.DOCUMENT_CHANGE)
+    }
     private val sessionToLobby = ConcurrentHashMap<String, String>()
     private val sessionToUserId = ConcurrentHashMap<String, String>()
 
@@ -38,7 +42,9 @@ class PearWebSocketHandler(private val objectMapper: ObjectMapper) : TextWebSock
             return
         }
 
-        log.info("[>] {} from {}", msg.type, sessionToUserId[session.id] ?: session.remoteAddress)
+        if (msg.type !in SILENT_TYPES) {
+            log.info("[>] {} from {}", msg.type, sessionToUserId[session.id] ?: session.remoteAddress)
+        }
 
         when (msg.type) {
             PearMessage.CREATE_LOBBY -> handleCreateLobby(session, msg)
