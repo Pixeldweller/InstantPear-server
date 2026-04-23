@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>InstantPear Screenshare</title>
+    <link rel="stylesheet" href="/overlay.css">
+</head>
+<body>
+    <div id="setup">
+        <h1>InstantPear</h1>
+        <div id="setup-role"></div>
+        <label>Your name<input id="nameInput" placeholder="Guest"></label>
+        <label id="keyRow" hidden>Lobby key (optional)<input id="keyInput" type="password"></label>
+        <button id="joinBtn">Join</button>
+        <div id="setupStatus" class="status"></div>
+    </div>
+
+    <div id="stage" hidden>
+        <div id="videoWrap">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+            <div id="notes"></div>
+        </div>
+        <div id="toolbar">
+            <span id="statusLine">Connecting...</span>
+            <div id="perfBar" hidden>
+                <label>FPS
+                    <select id="fpsSel">
+                        <option value="15">15</option>
+                        <option value="30" selected>30</option>
+                        <option value="60">60</option>
+                    </select>
+                </label>
+                <label>Scale ÷
+                    <select id="scaleSel">
+                        <option value="1" selected>1</option>
+                        <option value="1.5">1.5</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                </label>
+                <label>Max
+                    <select id="brSel">
+                        <option value="1000000">1 Mbps</option>
+                        <option value="2000000">2 Mbps</option>
+                        <option value="4000000" selected>4 Mbps</option>
+                        <option value="8000000">8 Mbps</option>
+                        <option value="16000000">16 Mbps</option>
+                    </select>
+                </label>
+            </div>
+            <button id="myNotesBtn" title="Show my notes" hidden>My notes (0)</button>
+            <button id="noteBtn" title="Place sticky note">Note</button>
+            <button id="leaveBtn">Leave</button>
+        </div>
+        <div id="myNotesPanel" hidden>
+            <div id="myNotesList"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="/overlay.js"></script>
+</body>
+</html>

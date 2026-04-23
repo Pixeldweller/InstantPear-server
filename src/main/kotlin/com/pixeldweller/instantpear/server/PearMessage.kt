@@ -20,7 +20,19 @@ data class PearMessage(
     val chunkIndex: Int? = null,
     val totalChunks: Int? = null,
     val filePath: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    // Overlay annotations (normalized 0..1 screen coords)
+    val nx: Double? = null,
+    val ny: Double? = null,
+    val color: String? = null,
+    val text: String? = null,
+    val noteId: String? = null,
+    // WebRTC signaling
+    val sdp: String? = null,
+    val sdpType: String? = null,
+    val candidate: String? = null,
+    val sdpMid: String? = null,
+    val sdpMLineIndex: Int? = null
 ) {
     companion object {
         const val CREATE_LOBBY = "create_lobby"
@@ -38,5 +50,16 @@ data class PearMessage(
         const val USER_JOINED = "user_joined"
         const val USER_LEFT = "user_left"
         const val ERROR = "error"
+        // Overlay annotations
+        const val OVERLAY_CURSOR = "cursor"
+        const val OVERLAY_CLICK = "click"
+        const val OVERLAY_NOTE = "note"
+        const val OVERLAY_NOTE_DELETE = "note_delete"
+        const val OVERLAY_HINT = "hint"
+        // WebRTC signaling (host <-> guest via lobby relay)
+        const val WEBRTC_OFFER = "webrtc_offer"
+        const val WEBRTC_ANSWER = "webrtc_answer"
+        const val WEBRTC_ICE = "webrtc_ice"
+        const val WEBRTC_READY = "webrtc_ready"
     }
 }

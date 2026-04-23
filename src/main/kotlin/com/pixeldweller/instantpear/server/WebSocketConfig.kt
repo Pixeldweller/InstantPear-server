@@ -15,11 +15,21 @@ class WebSocketConfig(
 ) : WebSocketConfigurer {
 
     override fun registerWebSocketHandlers(registry: WebSocketHandlerRegistry) {
-        val registration = registry.addHandler(handler, "/ws", "/")
+        // Raw WebSocket endpoint — used by plugin PearClient (raw mode) and
+        // the browser overlay page. Must not be wrapped with SockJS.
+        registry.addHandler(handler, "/ws")
             .setAllowedOrigins("*")
             .addInterceptors(HttpSessionHandshakeInterceptor())
+
+        // Optional SockJS endpoint on a separate path for clients that can't
+        // hold a raw WebSocket (e.g., PearClient with useSockJS=true).
+        // SockJS info/xhr endpoints carry credentials, so the wildcard origin
+        // must be expressed as a pattern rather than "*".
         if (sockJsEnabled) {
-            registration.withSockJS()
+            registry.addHandler(handler, "/sockjs")
+                .setAllowedOriginPatterns("*")
+                .addInterceptors(HttpSessionHandshakeInterceptor())
+                .withSockJS()
         }
     }
 }

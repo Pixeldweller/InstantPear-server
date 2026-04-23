@@ -15,12 +15,17 @@ class PearWebSocketHandler(private val objectMapper: ObjectMapper) : TextWebSock
     private val log = LoggerFactory.getLogger(PearWebSocketHandler::class.java)
 
     data class LobbyMember(val session: WebSocketSession, val userId: String, val userName: String)
-    data class Lobby(val key: String, val members: MutableList<LobbyMember> = mutableListOf())
+    data class Lobby(val key: String?, val members: MutableList<LobbyMember> = mutableListOf())
 
     private val lobbies = ConcurrentHashMap<String, Lobby>()
 
     companion object {
-        private val SILENT_TYPES = setOf(PearMessage.MOUSE_MOVE, PearMessage.DOCUMENT_CHANGE)
+        private val SILENT_TYPES = setOf(
+            PearMessage.MOUSE_MOVE,
+            PearMessage.DOCUMENT_CHANGE,
+            PearMessage.OVERLAY_CURSOR,
+            PearMessage.WEBRTC_ICE
+        )
     }
     private val sessionToLobby = ConcurrentHashMap<String, String>()
     private val sessionToUserId = ConcurrentHashMap<String, String>()
@@ -61,7 +66,7 @@ class PearWebSocketHandler(private val objectMapper: ObjectMapper) : TextWebSock
 
     private fun handleCreateLobby(session: WebSocketSession, msg: PearMessage) {
         val code = msg.lobbyCode ?: return sendError(session, "Missing lobby code")
-        val key = msg.lobbyKey ?: return sendError(session, "Missing lobby key")
+        val key = msg.lobbyKey?.takeIf { it.isNotBlank() }
 
         if (lobbies.containsKey(code)) {
             return sendError(session, "Lobby '$code' already exists")
@@ -81,10 +86,10 @@ class PearWebSocketHandler(private val objectMapper: ObjectMapper) : TextWebSock
 
     private fun handleJoinLobby(session: WebSocketSession, msg: PearMessage) {
         val code = msg.lobbyCode ?: return sendError(session, "Missing lobby code")
-        val key = msg.lobbyKey ?: return sendError(session, "Missing lobby key")
+        val key = msg.lobbyKey?.takeIf { it.isNotBlank() }
 
         val lobby = lobbies[code] ?: return sendError(session, "Lobby '$code' not found")
-        if (lobby.key != key) return sendError(session, "Invalid lobby key")
+        if (lobby.key != null && lobby.key != key) return sendError(session, "Invalid lobby key")
 
         val userId = UUID.randomUUID().toString().take(8)
         val userName = msg.userName ?: "Guest"

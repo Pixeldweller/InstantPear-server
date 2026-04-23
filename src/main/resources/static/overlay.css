@@ -1,0 +1,202 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    color: #eee;
+    font-family: system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+}
+
+[hidden] { display: none !important; }
+
+#setup {
+    max-width: 420px;
+    margin: 10vh auto;
+    padding: 24px;
+    background: #1b1b1b;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+#setup h1 { margin: 0 0 8px; font-size: 20px; }
+#setup label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+#setup input {
+    background: #2a2a2a;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 8px;
+    border-radius: 4px;
+}
+#setup button {
+    background: #3b82f6;
+    border: none;
+    color: white;
+    padding: 10px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#setup button:hover { background: #2563eb; }
+.status { font-size: 12px; color: #aaa; min-height: 16px; }
+.status.err { color: #ef4444; }
+
+#stage { display: flex; flex-direction: column; height: 100vh; }
+#videoWrap {
+    position: relative;
+    flex: 1 1 auto;
+    background: #000;
+    overflow: hidden;
+}
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+#overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    cursor: crosshair;
+}
+#notes { position: absolute; inset: 0; pointer-events: none; }
+.note {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: rgba(250, 204, 21, 0.35);
+    border: 1px solid rgba(250, 204, 21, 0.8);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    min-width: 80px;
+    max-width: 220px;
+    pointer-events: auto;
+    cursor: grab;
+    user-select: none;
+}
+.note.opaque { background: rgba(250, 204, 21, 0.95); color: #111; }
+.note .actions {
+    float: right;
+    margin-left: 8px;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+.note .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.7;
+    user-select: none;
+    background: rgba(0, 0, 0, 0.15);
+}
+.note .action:hover { opacity: 1; background: rgba(0, 0, 0, 0.3); }
+.note .action.flash { background: rgba(34, 197, 94, 0.6); opacity: 1; }
+.note.editing textarea {
+    width: 100%;
+    background: transparent;
+    color: inherit;
+    border: none;
+    font: inherit;
+    resize: none;
+    outline: none;
+}
+
+#toolbar {
+    background: #181818;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #222;
+}
+#toolbar button {
+    background: #2a2a2a;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#toolbar button:hover { background: #333; }
+#statusLine { flex: 1; font-size: 12px; color: #aaa; }
+
+#perfBar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-right: 8px;
+    font-size: 11px;
+    color: #bbb;
+}
+#perfBar label {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+}
+#perfBar select {
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+
+#noteBtn.active { background: #facc15; color: #111; }
+
+#myNotesPanel {
+    position: absolute;
+    right: 8px;
+    bottom: 54px;
+    width: 280px;
+    max-height: 40vh;
+    overflow-y: auto;
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 8px;
+    z-index: 20;
+}
+#myNotesList .entry {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #222;
+    font-size: 12px;
+}
+#myNotesList .entry:last-child { border-bottom: none; }
+#myNotesList .text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #eee;
+}
+#myNotesList .remove {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+}
+#myNotesList .remove:hover { background: #dc2626; }
+#myNotesList .empty {
+    color: #888;
+    font-size: 11px;
+    padding: 4px 0;
+}
