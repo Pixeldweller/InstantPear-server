@@ -23,8 +23,11 @@
         stage: document.getElementById('stage'),
         video: document.getElementById('video'),
         overlay: document.getElementById('overlay'),
-        notes: document.getElementById('notes'),
         statusLine: document.getElementById('statusLine'),
+        noteModalBackdrop: document.getElementById('noteModalBackdrop'),
+        noteModalText: document.getElementById('noteModalText'),
+        noteModalOk: document.getElementById('noteModalOk'),
+        noteModalCancel: document.getElementById('noteModalCancel'),
         noteBtn: document.getElementById('noteBtn'),
         myNotesBtn: document.getElementById('myNotesBtn'),
         myNotesPanel: document.getElementById('myNotesPanel'),
@@ -430,6 +433,12 @@
     }
 
     let noteMode = false;
+    let draggingNoteId = null;
+    let dragCenterOffsetX = 0;
+    let dragCenterOffsetY = 0;
+    let dragSuppressClick = false;
+    let lastDragSend = 0;
+
     function wireGuestInput() {
         el.noteBtn.addEventListener('click', () => {
             noteMode = !noteMode;
@@ -454,7 +463,69 @@
                 nx: n.x, ny: n.y,
             });
         });
+
+        el.overlay.addEventListener('pointerdown', (ev) => {
+            if (ev.button !== 0) return; // only left-button starts a drag
+            const overlayRect = el.overlay.getBoundingClientRect();
+            const px = ev.clientX - overlayRect.left;
+            const py = ev.clientY - overlayRect.top;
+            const hit = hitTestNote(px, py);
+            if (!hit) return;
+            draggingNoteId = hit.id;
+            dragCenterOffsetX = px - hit.rect.cx;
+            dragCenterOffsetY = py - hit.rect.cy;
+            dragSuppressClick = true;
+            try { el.overlay.setPointerCapture(ev.pointerId); } catch (_) {}
+            ev.preventDefault();
+        });
+
+        el.overlay.addEventListener('pointermove', (ev) => {
+            if (!draggingNoteId) return;
+            const vr = videoRect();
+            if (!vr) return;
+            const overlayRect = el.overlay.getBoundingClientRect();
+            const px = ev.clientX - overlayRect.left;
+            const py = ev.clientY - overlayRect.top;
+            const cx = px - dragCenterOffsetX;
+            const cy = py - dragCenterOffsetY;
+            const nx = clamp01((cx - vr.ox) / vr.dw);
+            const ny = clamp01((cy - vr.oy) / vr.dh);
+            const n = notes.get(draggingNoteId);
+            if (!n) return;
+            n.nx = nx; n.ny = ny;
+            if (myNotes.has(draggingNoteId)) {
+                myNotes.set(draggingNoteId, { nx, ny, text: n.text });
+                if (!el.myNotesPanel.hidden) renderMyNotesList();
+            }
+            const now = performance.now();
+            if (now - lastDragSend >= 50) {
+                lastDragSend = now;
+                send({
+                    type: 'note',
+                    userId: myId, userName: myName,
+                    noteId: draggingNoteId, nx, ny, text: n.text || '',
+                });
+            }
+        });
+
+        const endDrag = (ev) => {
+            if (!draggingNoteId) return;
+            const id = draggingNoteId;
+            draggingNoteId = null;
+            try { el.overlay.releasePointerCapture(ev.pointerId); } catch (_) {}
+            const n = notes.get(id);
+            if (!n) return;
+            send({
+                type: 'note',
+                userId: myId, userName: myName,
+                noteId: id, nx: n.nx, ny: n.ny, text: n.text || '',
+            });
+        };
+        el.overlay.addEventListener('pointerup', endDrag);
+        el.overlay.addEventListener('pointercancel', endDrag);
+
         el.overlay.addEventListener('click', (ev) => {
+            if (dragSuppressClick) { dragSuppressClick = false; return; }
             const n = normalize(ev);
             if (!n) return;
             if (noteMode) {
@@ -481,9 +552,9 @@
         });
     }
 
-    function placeNoteAt(n) {
+    async function placeNoteAt(n) {
         const id = crypto.randomUUID();
-        const text = prompt('Note text:', '');
+        const text = await openNoteModal('');
         if (text === null) return;
         send({
             type: 'note',
@@ -495,6 +566,45 @@
         // video stream — no DOM duplication on the guest side.
         myNotes.set(id, { nx: n.x, ny: n.y, text });
         refreshMyNotesPanel();
+    }
+
+    /**
+     * Multi-line note input via a styled textarea modal. Returns the entered
+     * text (newlines preserved) or null if the user cancelled.
+     */
+    function openNoteModal(initial) {
+        return new Promise((resolve) => {
+            el.noteModalText.value = initial || '';
+            el.noteModalBackdrop.hidden = false;
+            // Defer focus so the modal has time to lay out.
+            setTimeout(() => el.noteModalText.focus(), 0);
+
+            const cleanup = () => {
+                el.noteModalBackdrop.hidden = true;
+                el.noteModalOk.removeEventListener('click', onOk);
+                el.noteModalCancel.removeEventListener('click', onCancel);
+                el.noteModalText.removeEventListener('keydown', onKey);
+                el.noteModalBackdrop.removeEventListener('mousedown', onBackdrop);
+            };
+            const onOk = () => { const t = el.noteModalText.value; cleanup(); resolve(t); };
+            const onCancel = () => { cleanup(); resolve(null); };
+            const onKey = (ev) => {
+                if (ev.key === 'Escape') { ev.preventDefault(); onCancel(); }
+                else if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+                    ev.preventDefault();
+                    onOk();
+                }
+                // plain Enter falls through and inserts a newline.
+            };
+            const onBackdrop = (ev) => {
+                if (ev.target === el.noteModalBackdrop) onCancel();
+            };
+
+            el.noteModalOk.addEventListener('click', onOk);
+            el.noteModalCancel.addEventListener('click', onCancel);
+            el.noteModalText.addEventListener('keydown', onKey);
+            el.noteModalBackdrop.addEventListener('mousedown', onBackdrop);
+        });
     }
 
     function refreshMyNotesPanel() {
@@ -600,14 +710,97 @@
             drawCursor(ctx, p.x, p.y, c.color, c.name);
         }
 
-        // Notes re-position (DOM elements)
-        for (const n of notes.values()) {
-            const p = toScreen(vidRect, n.nx, n.ny);
-            n.el.style.left = p.x + 'px';
-            n.el.style.top = p.y + 'px';
+        // During a guest-initiated drag, render a local ghost of the note so
+        // the mover sees immediate feedback — the video stream catches up a
+        // few frames later.
+        if (role === 'guest' && draggingNoteId) {
+            const n = notes.get(draggingNoteId);
+            if (n) drawNotePreview(ctx, vidRect, n);
         }
 
         requestAnimationFrame(renderLoop);
+    }
+
+    function drawNotePreview(ctx, vr, note) {
+        ctx.save();
+        const r = noteScreenRect(vr, note, ctx);
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.55)';
+        ctx.strokeStyle = 'rgba(250, 204, 21, 1)';
+        ctx.lineWidth = 2;
+        roundRect(ctx, r.x, r.y, r.w, r.h, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#111';
+        ctx.font = '13px sans-serif';
+        ctx.textBaseline = 'top';
+        const lineHeight = 16;
+        const lines = (note.text || '').split('\n').map((l) => truncateFor(ctx, l, 220));
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], r.x + 10, r.y + 6 + i * lineHeight);
+        }
+        ctx.textBaseline = 'alphabetic';
+        ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, radius) {
+        const r = Math.min(radius, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    function truncateFor(ctx, text, maxPx) {
+        if (ctx.measureText(text).width <= maxPx) return text;
+        const ell = '...';
+        let lo = 0, hi = text.length;
+        while (lo < hi) {
+            const mid = (lo + hi + 1) >> 1;
+            if (ctx.measureText(text.slice(0, mid) + ell).width <= maxPx) lo = mid;
+            else hi = mid - 1;
+        }
+        return text.slice(0, lo) + ell;
+    }
+
+    // Approximate the host overlay's note rectangle in screen (canvas) space
+    // so the guest can hit-test against it. Dimensions mirror the Java panel
+    // draw logic in OverlayWindow.kt — including multi-line text height.
+    function noteScreenRect(vr, note, ctx) {
+        const padX = 10, padY = 6, textMaxW = 220, lineHeight = 16;
+        const prevFont = ctx.font;
+        ctx.font = '13px sans-serif';
+        const lines = (note.text || '').split('\n');
+        const maxLineW = lines.reduce(
+            (m, l) => Math.max(m, ctx.measureText(l).width),
+            0,
+        );
+        ctx.font = prevFont;
+        const tw = Math.min(maxLineW, textMaxW);
+        const textBlockH = Math.max(1, lines.length) * lineHeight;
+        const w = Math.round(tw + padX * 2);
+        const h = Math.max(Math.round(textBlockH + padY * 2), 18 + padY * 2);
+        const sx = vr.ox + note.nx * vr.dw;
+        const sy = vr.oy + note.ny * vr.dh;
+        return { x: Math.round(sx - w / 2), y: Math.round(sy - h / 2), w, h, cx: sx, cy: sy };
+    }
+
+    function hitTestNote(px, py) {
+        const vr = videoRect();
+        if (!vr) return null;
+        const ctx = el.overlay.getContext('2d');
+        // Iterate in reverse insertion order so top-most wins visually.
+        const ids = Array.from(notes.keys()).reverse();
+        for (const id of ids) {
+            const n = notes.get(id);
+            const r = noteScreenRect(vr, n, ctx);
+            if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
+                return { id, rect: r };
+            }
+        }
+        return null;
     }
 
     function videoRect() {
@@ -652,125 +845,21 @@
     }
 
     // ── Notes (DOM elements) ─────────────────────────────────────────────
+    // Data-only — DOM rendering of notes on the guest was removed so the
+    // host overlay (captured in the video stream) is the sole visual source.
+    // The Map is used for hit-testing during guest-driven drag.
     function upsertNote(id, nx, ny, text) {
         if (!id) return;
-        let n = notes.get(id);
-        if (!n) {
-            const div = document.createElement('div');
-            div.className = 'note';
-
-            const actions = document.createElement('span');
-            actions.className = 'actions';
-
-            const copy = document.createElement('span');
-            copy.className = 'action copy';
-            copy.title = 'Copy to clipboard';
-            copy.textContent = '⧉';
-            copy.addEventListener('pointerdown', (e) => e.stopPropagation());
-            copy.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const cur = notes.get(id);
-                if (!cur) return;
-                const value = cur.text || '';
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(value).catch(() => fallbackCopy(value));
-                } else {
-                    fallbackCopy(value);
-                }
-                flashAction(copy);
-            });
-
-            const close = document.createElement('span');
-            close.className = 'action close';
-            close.title = 'Remove note';
-            close.textContent = '✕';
-            close.addEventListener('pointerdown', (e) => e.stopPropagation());
-            close.addEventListener('click', (e) => {
-                e.stopPropagation();
-                send({ type: 'note_delete', noteId: id, userId: myId });
-                removeNote(id);
-            });
-
-            actions.appendChild(copy);
-            actions.appendChild(close);
-
-            const body = document.createElement('span');
-            body.className = 'body';
-
-            div.appendChild(actions);
-            div.appendChild(body);
-            div.addEventListener('click', (e) => {
-                if (e.target.closest('.action')) return;
-                div.classList.toggle('opaque');
-            });
-            makeDraggable(div, id);
-            el.notes.appendChild(div);
-            n = { nx, ny, text, el: div, body };
-            notes.set(id, n);
+        const existing = notes.get(id);
+        if (existing) {
+            existing.nx = nx; existing.ny = ny; existing.text = text;
         } else {
-            n.nx = nx; n.ny = ny; n.text = text;
+            notes.set(id, { nx, ny, text });
         }
-        n.body = n.el.querySelector('.body');
-        n.body.textContent = text;
-        n.nx = nx; n.ny = ny;
-    }
-
-    function fallbackCopy(value) {
-        try {
-            const ta = document.createElement('textarea');
-            ta.value = value;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            ta.remove();
-        } catch (_) {}
-    }
-
-    function flashAction(node) {
-        node.classList.add('flash');
-        setTimeout(() => node.classList.remove('flash'), 350);
     }
 
     function removeNote(id) {
-        const n = notes.get(id);
-        if (!n) return;
-        try { n.el.remove(); } catch {}
         notes.delete(id);
-    }
-
-    function makeDraggable(div, id) {
-        let dragging = false, startNx = 0, startNy = 0, startX = 0, startY = 0;
-        div.addEventListener('pointerdown', (ev) => {
-            if (ev.target.closest('.action')) return;
-            dragging = true;
-            div.setPointerCapture(ev.pointerId);
-            const n = notes.get(id); if (!n) return;
-            startNx = n.nx; startNy = n.ny;
-            startX = ev.clientX; startY = ev.clientY;
-            div.style.cursor = 'grabbing';
-        });
-        div.addEventListener('pointermove', (ev) => {
-            if (!dragging) return;
-            const vr = videoRect(); if (!vr) return;
-            const n = notes.get(id); if (!n) return;
-            const dx = (ev.clientX - startX) / vr.dw;
-            const dy = (ev.clientY - startY) / vr.dh;
-            n.nx = clamp01(startNx + dx);
-            n.ny = clamp01(startNy + dy);
-        });
-        div.addEventListener('pointerup', (ev) => {
-            if (!dragging) return;
-            dragging = false;
-            div.style.cursor = 'grab';
-            const n = notes.get(id); if (!n) return;
-            send({
-                type: 'note',
-                userId: myId, userName: myName,
-                noteId: id, nx: n.nx, ny: n.ny, text: n.text,
-            });
-        });
     }
 
     function clamp01(v) { return Math.max(0, Math.min(1, v)); }

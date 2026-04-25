@@ -60,6 +60,17 @@
         </div>
     </div>
 
+    <div id="noteModalBackdrop" hidden>
+        <div id="noteModal" role="dialog" aria-modal="true">
+            <h2 id="noteModalTitle">Note</h2>
+            <textarea id="noteModalText" rows="5" placeholder="Type your note. Newlines allowed."></textarea>
+            <div class="modalActions">
+                <button id="noteModalCancel" type="button">Cancel</button>
+                <button id="noteModalOk" type="button" class="primary">Place</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
     <script src="/overlay.js"></script>
 </body>

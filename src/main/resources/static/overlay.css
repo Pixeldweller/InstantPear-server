@@ -10,6 +10,65 @@ html, body {
 
 [hidden] { display: none !important; }
 
+#noteModalBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+#noteModal {
+    width: 90%;
+    max-width: 440px;
+    background: #1d1d1d;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 18px 18px 14px;
+    color: #eee;
+    font-family: system-ui, sans-serif;
+}
+#noteModal h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+#noteModal textarea {
+    width: 100%;
+    min-height: 90px;
+    background: #111;
+    color: #eee;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    resize: vertical;
+    box-sizing: border-box;
+}
+#noteModal textarea:focus { outline: 1px solid #3b82f6; }
+#noteModal .modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+#noteModal button {
+    background: #2a2a2a;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+#noteModal button:hover { background: #333; }
+#noteModal button.primary {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+    font-weight: 600;
+}
+#noteModal button.primary:hover { background: #2563eb; }
+
 #setup {
     max-width: 420px;
     margin: 10vh auto;
