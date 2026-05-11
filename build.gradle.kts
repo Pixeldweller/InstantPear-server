@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixeldweller"
-version = "0.3-SNAPSHOT"
+version = "0.5-SNAPSHOT"
 
 java {
     toolchain {
